@@ -1,0 +1,150 @@
+#!/bin/bash
+# Contract - Search for more Contract details using Programm_Name or Contract
+# Author: Joviliano, Raul (rlou@br.ibm.com)
+#         Monteiro, David (david.marques1@ibm.com)
+#
+# DESCRIPTION:
+# -----------
+#
+# This script, intended to be called via "alias", will read the Contract and Programm_Name
+#
+#
+# It was created to get more info about a Contract and Programm_Name
+#
+# HISTORY
+# -------
+#
+#   VRS        DATE               RESP                    DESCRIPTION
+# --------- -----------  --------------------------  ---------------------------------------------------
+# 1.0.0     May/18/2018  Raul, Joviliano (rl580h)     U2L-2660 - Creation
+#                        
+########################################################################################################
+
+##############################################################################################
+#                                     MAIN                                                   #
+##############################################################################################
+# This script only works after the sudo                                                      #
+# and                                                                                        #
+# This script only works after the selection of a billpull was done via "ubmenu"             #
+# and                                                                                        #
+# This script only works after connected to Data Base "ubdbcon"                              #
+##############################################################################################
+
+
+input_parameter=$1
+touch /tmp/contracttempfile.txt
+result=0
+
+case $input_parameter in
+-h) echo -e "Using this tool you need to provide Programm_Name or Contract.\nPlease follow an example bellow:\ncontract FCI2PR05\ncontract SELECT_T14317_FOR_BBGW" ;;
+--help) echo -e "Using this tool you need to provide Programm_Name or Contract.\nPlease follow an example bellow:\ncontract FCI2PR05\ncontract SELECT_T14317_FOR_BBGW" ;;
+*)
+if [ ${#input_parameter} == 8 ]
+then
+        Program_Name=$input_parameter
+        db2 -x "select distinct tip100.CONTRACT, tip100.PROGRAM_NAME, T08006.PRCS_ID, T08006.LU_NAME from tip100, T08006 where tip100.PROGRAM_NAME='$input_parameter' and T08006.LU_NAME=tip100.CONTRACT" > /tmp/contracttempfile.txt
+        db2return=$?
+        case $db2return in
+        4) echo "Your are not connected to Data Base" ;;
+        0)cat /tmp/contracttempfile.txt | while read line
+        do
+        if [ -n /tmp/contracttempfile.txt ]
+        then
+                Contract=`echo "$line" | cut -c 1-30`
+                Program_Name=`echo "$line" | cut -c 32-41`
+                PRCS_ID=`echo "$line" | cut -c 45-48`
+                Lu_Name=`echo "$line" | cut -c 51-80`
+                path_usr=`pwd`
+                bp
+                path_pwd=`pwd`
+                proc_path=$path_pwd/procs
+                jobs_path=$path_pwd/jobs
+                proc=`grep -iRl PRCID=$PRCS_ID $proc_path/*`
+                proc_print=`echo $proc | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+                job=`grep -iRl PRCID=$PRCS_ID $jobs_path/*`
+		job_print=`echo $job | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+                cd $path_usr
+                echo "-----------------------------------------------------"
+                echo "Contract     :"  $Contract
+                echo "Program Name :"  $Program_Name
+                echo "Job          :"  $job_print $proc_print
+                echo "-----------------------------------------------------"
+        fi
+        done
+        result=1
+        esac
+        if [ $result == 0 ]
+        then
+        db2 -x "select distinct CONTRACT, PROGRAM_NAME from tip100 where PROGRAM_NAME='$input_parameter'" > /tmp/contracttempfile.txt
+        db2return=$?
+        case $db2return in
+                1) echo "Your PROGRAM NAME does not exist" ;;
+                0) cat /tmp/contracttempfile.txt | while read line
+                do
+                Contract=`echo "$line" | cut -c 1-30`
+                Program_Name=`echo "$line" | cut -c 32-41`
+                cd $path_usr
+                echo "-----------------------------------------------------"
+                echo "Contract     :"  $Contract
+                echo "Program Name :"  $Program_Name
+                echo "-----------------------------------------------------"
+                done
+                esac
+        fi
+        else
+        if [ ${#input_parameter} != 8 ]
+        then
+        db2 -x "select distinct tip100.CONTRACT, tip100.PROGRAM_NAME, T08006.PRCS_ID, T08006.LU_NAME from tip100, T08006 where tip100.CONTRACT='$input_parameter' and T08006.LU_NAME='$input_parameter'" > /tmp/contracttempfile.txt
+                db2return=$?
+        case $db2return in
+        4) echo "Your are not connected to Data Base" ;;
+        0) cat /tmp/contracttempfile.txt | while read line
+                do
+                if [ -n /tmp/contracttempfile.txt ]
+		 then
+                Contract=`echo "$line" | cut -c 1-30`
+                Program_Name=`echo "$line" | cut -c 32-41`
+                PRCS_ID=`echo "$line" | cut -c 45-48`
+                Lu_Name=`echo "$line" | cut -c 51-80`
+                path_usr=`pwd`
+                bp
+                path_pwd=`pwd`
+                proc_path=$path_pwd/procs
+                jobs_path=$path_pwd/jobs
+                proc=`grep -iRl PRCID=$PRCS_ID $proc_path/*`
+                proc_print=`echo $proc | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+                job=`grep -iRl PRCID=$PRCS_ID $jobs_path/*`
+                job_print=`echo $job | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+                cd $path_usr
+                echo "-----------------------------------------------------"
+                echo "Contract     :"  $Contract
+                echo "Program Name :"  $Program_Name
+                echo "Job          :"  $job_print $proc_print
+                echo "-----------------------------------------------------"
+                fi
+                done
+                result=1
+                esac
+                if [ $result == 0 ]
+                then
+                db2 -x "select distinct CONTRACT, PROGRAM_NAME from tip100 where CONTRACT='$input_parameter'" > /tmp/contracttempfile.txt
+                db2return=$?
+                case $db2return in
+                1) echo "Your CONTRACT does not exist" ;;
+                0) cat /tmp/contracttempfile.txt | while read line
+                do
+                Contract=`echo "$line" | cut -c 1-30`
+                Program_Name=`echo "$line" | cut -c 32-41`
+                cd $path_usr
+                echo "-----------------------------------------------------"
+                echo "Contract     :"  $Contract
+                echo "Program Name :"  $Program_Name
+                echo "-----------------------------------------------------"
+                done
+		esac
+                fi
+        fi
+fi
+esac
+rm /tmp/contracttempfile.txt
+

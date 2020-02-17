@@ -1,0 +1,112 @@
+#!/bin/bash
+# Kontrol - Search for more Controls details using PRCS_ID or CNTL_ID
+# Author: Joviliano, Raul (rlou@br.ibm.com)
+#
+# DESCRIPTION:
+# -----------
+#
+# This script, intended to be called via "alias", will read the Controls and Procs
+#
+#
+# It was created to get more info about a CNTL_ID or PRCS_ID
+#
+# HISTORY
+# -------
+#
+#   VRS        DATE               RESP                    DESCRIPTION
+# --------- -----------  --------------------------  ---------------------------------------------------
+# 1.0.0     May/18/2018  Raul, Joviliano (rl580h)     U2L-2660 - Creation
+#
+########################################################################################################
+
+##############################################################################################
+#                                     MAIN                                                   #
+##############################################################################################
+# This script only works after the sudo                                                      #
+# and                                                                                        #
+# This script only works after the selection of a billpull was done via "ubmenu"             #
+# and                                                                                        #
+# This script only works after connected to Data Base "ubdbcon"                              #
+##############################################################################################
+
+
+input_parameter=$1
+touch /tmp/kontroltempfile.txt
+case $input_parameter in
+-h) echo -e "Using this tool you need to provide CNTL_ID or PRCS_ID.\nPlease follow an example bellow:\nkontrol FCIC0009\nkontrol C010" ;;
+--help) echo -e "Using this tool you need to provide CNTL_ID or PRCS_ID.\nPlease follow an example bellow:\nkontrol FCIC0009\nkontrol C010" ;;
+*)
+if [ ${#input_parameter} == 4 ]
+then
+        PRCS_ID=$input_parameter
+        db2 -x "select T08015.PRCS_ID, T08014.CNTL_ID, T08014.CNTL_FILE_NAME, T08014.CNTL_DESC, T08014.CNTL_OPERN_DESC from T08015, T08014 where T08015.CNTL_ID=T08014.CNTL_ID and T08015.PRCS_ID='$input_parameter'" > /tmp/kontroltempfile.txt
+        db2return=$?
+        case $db2return in
+        1) echo "Your PRCS_ID does not exist" ;;
+        4) echo "Your are not connected to Data Base" ;;
+        0)cat /tmp/kontroltempfile.txt | while read line
+        do
+        CNTL_ID=`echo "$line" | cut -c 9-17`
+        CNTL_FILE_NAME=`echo "$line" | cut -c 18-32`
+        CNTL_DESC=`echo "$line" | cut -c 33-73`
+        CNTL_OPERN_DESC=`echo "$line" | cut -c 74-83`
+        path_usr=`pwd`
+        bp
+        path_pwd=`pwd`
+        proc_path=$path_pwd/procs
+        jobs_path=$path_pwd/jobs
+        proc=`grep -iRl PRCID=$input_parameter $proc_path/*`
+        proc_print=`echo $proc | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+        job=`grep -iRl PRCID=$input_parameter $jobs_path/*`
+        job_print=`echo $job | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+        cd $path_usr
+        echo "-----------------------------------------------------"
+        echo "Control    :"  $CNTL_ID
+        echo "File       :"  $CNTL_FILE_NAME
+        echo "Description:"  $CNTL_DESC
+        echo "Operation  :"  $CNTL_OPERN_DESC
+        echo "Job        :"  $proc_print $job_print
+        echo "-----------------------------------------------------"
+		done
+        esac
+        else
+        if [ ${#input_parameter} == 8 ]
+        then
+                CNTL_ID=$input_parameter
+                db2 -x "select T08014.CNTL_ID, T08014.CNTL_FILE_NAME, T08014.CNTL_DESC, T08014.CNTL_OPERN_DESC, T08015.PRCS_ID from T08014, T08015 where T08014.CNTL_ID= '$input_parameter' and T08015.CNTL_ID=T08014.CNTL_ID" > /tmp/kontroltempfile.txt
+                db2return=$?
+                case $db2return in
+                1) echo "Your CNTL_ID does not exist" ;;
+                4) echo "Your are not connected to Data Base" ;;
+                0)cat /tmp/kontroltempfile.txt | while read line
+                do
+                CNTL_ID=`echo "$line" | cut -c 1-8`
+                CNTL_FILE_NAME=`echo "$line" | cut -c 10-23`
+                CNTL_DESC=`echo "$line" | cut -c 25-64`
+                CNTL_OPERN_DESC=`echo "$line" | cut -c 66-79`
+                PRCS_ID=`echo "$line" | cut -c 82-87`
+                path_usr=`pwd`
+                bp
+                path_pwd=`pwd`
+                proc_path=$path_pwd/procs
+                jobs_path=$path_pwd/jobs
+                proc=`grep -iRl PRCID=$PRCS_ID $proc_path/*`
+                proc_print=`echo $proc | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+                job=`grep -iRl PRCID=$PRCS_ID $jobs_path/*`
+                job_print=`echo $job | sed "s/ /\\n/g" | awk -F "/" '{print $NF}' | cut -c 1-4`
+                cd $path_usr
+                echo "-----------------------------------------------------"
+                echo "Control    :"  $CNTL_ID
+                echo "File       :"  $CNTL_FILE_NAME
+                echo "Description:"  $CNTL_DESC
+                echo "Operation  :"  $CNTL_OPERN_DESC
+                echo "Job        :"  $proc_print $job_print
+                echo "-----------------------------------------------------"
+                done
+                esac
+                else
+                echo "The information provided are not CNTL_ID nor PRCS_ID"
+                fi
+fi
+esac
+rm /tmp/kontroltempfile.txt
